@@ -42,7 +42,7 @@ def _write(path: Path, content: dict) -> None:
     if path.exists() and path.read_text(encoding="utf-8") == text:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    path.write_text(text, encoding="utf-8", newline="\n")
 
 
 def _periods(cache: dict | None) -> list[Period]:
