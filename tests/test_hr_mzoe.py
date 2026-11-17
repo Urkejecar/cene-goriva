@@ -45,6 +45,13 @@ def test_record_starts_new_period_on_change():
     assert result == [periods[0], hr(date(2026, 11, 24), date(2026, 11, 24), 1.50)]
 
 
+def test_record_closes_old_price_day_before_change():
+    # last seen on Sunday, the Monday check was missed, new price seen Tuesday
+    periods = [hr(date(2026, 11, 17), date(2026, 11, 22), 1.56)]
+    result = hr_mzoe.record_observation(periods, "petrol95", date(2026, 11, 24), 1.50)
+    assert result == [hr(date(2026, 11, 17), date(2026, 11, 23), 1.56), hr(date(2026, 11, 24), date(2026, 11, 24), 1.50)]
+
+
 def test_record_same_day_correction():
     # 00:30 run still saw the old price on 11-24; a later run that day sees the new one.
     periods = [hr(date(2026, 11, 17), date(2026, 11, 24), 1.56)]

@@ -54,7 +54,8 @@ export function rangeStart(range, today) {
 
 /**
  * Two points per period (start of first day, end of last day): straight lines draw exact steps.
- * The latest period in the window stays in effect up to `to` (a price holds until it changes).
+ * The latest period in the window stays in effect up to `to` (a price holds until it changes),
+ * and its points say so: an HR period only runs to the day we last saw it.
  */
 export function stepPoints(periods, country, fuel, from, to) {
   const pts = [];
@@ -64,7 +65,7 @@ export function stepPoints(periods, country, fuel, from, to) {
     if (!isLatest && p.to < from) return;
     const start = p.from > from ? p.from : from;
     const end = isLatest || p.to > to ? to : p.to;
-    const base = { y: p.p, s: p.s, from: p.from, to: p.to };
+    const base = { y: p.p, s: p.s, from: p.from, to: isLatest && to > p.to ? to : p.to };
     pts.push({ x: dayMs(start), ...base }, { x: dayMs(end) + END_OF_DAY_MS, ...base });
   });
   return pts;

@@ -96,7 +96,8 @@ test("latest period stays in effect up to the window end", () => {
   // HR periods only run to the last day we observed them; the price holds until it changes.
   const pts = stepPoints(DATA.periods, "HR", "petrol95", "2026-11-10", "2026-11-23");
   assert.equal(pts.at(-1).x, Date.UTC(2026, 10, 23) + 86399000);
-  assert.equal(pts.at(-1).to, "2026-11-17");
+  assert.equal(pts.at(-1).to, "2026-11-23"); // shown as valid to Monday, not to the last day seen
+  assert.equal(pts.at(-1).from, "2026-11-17");
 });
 
 test("chart end is the day before an upcoming price, else the current period end or today", () => {

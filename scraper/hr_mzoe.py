@@ -63,11 +63,11 @@ def record_observation(periods: list[Period], fuel: str, day: date, price: float
     if price == last.price:
         periods[-1] = replace(last, end=max(last.end, day))
         return periods
-    if day <= last.end:
+    if last.start == day:
         # A different price for a day already covered: correct that day.
-        if last.start == day:
-            periods[-1] = replace(last, price=price)
-            return periods
-        periods[-1] = replace(last, end=day - timedelta(days=1))
+        periods[-1] = replace(last, price=price)
+        return periods
+    # The old price held until the day before the new one (even if a check was missed).
+    periods[-1] = replace(last, end=day - timedelta(days=1))
     periods.append(Period("HR", fuel, day, day, price, "mzoe"))
     return periods
