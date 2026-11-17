@@ -1,6 +1,6 @@
 import {
-  chartEnd, dayMs, extensionPoints, formatChange, formatPrice, isStale, priceStates, rangeStart, shortDate, stepPoints,
-  todayLjubljana,
+  cardStale, chartEnd, dayMs, extensionPoints, formatChange, formatPrice, isStale, priceStates, rangeStart, shortDate,
+  shouldRefresh, stepPoints, todayLjubljana,
 } from "./logic.js";
 
 const COUNTRY = { SI: "Slovenija", HR: "Hrvaška" };
@@ -71,6 +71,9 @@ function renderCard(country, today) {
     ? `velja od ${shortDate(cur.from)} do ${shortDate(cur.to)}`
     : `velja od ${shortDate(cur.from)}`;
   card.append(el("p", { class: "valid" }, validText));
+  if (cardStale(data, country, today)) {
+    card.append(el("p", { class: "stale-note" }, "Cena morda ni več aktualna – vir trenutno ni dosegljiv."));
+  }
 
   const up = states.petrol95.upcoming || states.diesel.upcoming;
   if (up) {
@@ -308,15 +311,19 @@ function renderHeader() {
   document.getElementById("stale").hidden = !isStale(data.checked_at, Date.now());
 }
 
-async function main() {
-  bindControls();
-  syncControls();
+let loadedAt = 0;
+let loadedToday = "";
+
+async function load() {
+  loadedAt = Date.now();
+  loadedToday = todayLjubljana();
   try {
     const res = await fetch("data.json", { cache: "no-cache" });
     if (!res.ok) throw new Error(res.status);
     data = await res.json();
+    document.getElementById("load-error").hidden = true;
   } catch {
-    document.getElementById("load-error").hidden = false;
+    if (!data) document.getElementById("load-error").hidden = false;
     return;
   }
   const today = todayLjubljana();
@@ -324,6 +331,19 @@ async function main() {
   renderCard("SI", today);
   renderCard("HR", today);
   renderChart();
+}
+
+function refreshIfOld() {
+  if (document.visibilityState === "visible" && shouldRefresh(loadedAt, loadedToday, Date.now(), todayLjubljana())) load();
+}
+
+function main() {
+  bindControls();
+  syncControls();
+  // A home-screen app often resumes without reloading the page.
+  document.addEventListener("visibilitychange", refreshIfOld);
+  window.addEventListener("pageshow", (e) => { if (e.persisted) refreshIfOld(); });
+  load();
 }
 
 main();

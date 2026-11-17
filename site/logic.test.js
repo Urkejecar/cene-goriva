@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  chartEnd, extensionPoints, formatChange, formatPrice, isStale, priceStates, rangeStart, stepPoints, todayLjubljana,
+  cardStale, chartEnd, extensionPoints, formatChange, formatPrice, isStale, priceStates, rangeStart, shouldRefresh, stepPoints, todayLjubljana,
 } from "./logic.js";
 
 const P = (c, f, from, to, p, s = "gov.si") => ({ c, f, from, to, p, s });
@@ -44,6 +44,31 @@ test("no change shown against a different source", () => {
   // HR regulated price vs last week's EU all-station average would be misleading.
   const d = { periods: [P("HR", "petrol95", "2026-11-09", "2026-11-16", 1.749, "eu-bulletin"), P("HR", "petrol95", "2026-11-17", "2026-11-17", 1.56, "mzoe")] };
   assert.equal(priceStates(d, "HR", "petrol95", "2026-11-17").previous, null);
+});
+
+test("card is flagged when its source is failing or its price has run out", () => {
+  assert.equal(cardStale(DATA, "SI", "2026-11-18"), false);
+  assert.equal(cardStale({ ...DATA, errors: [{ source: "si_gov", message: "x" }] }, "SI", "2026-11-18"), true);
+  assert.equal(cardStale({ ...DATA, errors: [{ source: "napoved", message: "x" }] }, "SI", "2026-11-18"), false);
+  // gov.si didn't publish the new week: last period ended yesterday
+  assert.equal(cardStale(DATA, "SI", "2026-11-24"), true);
+  // HR recorded up to 11-17: fine on 11-18, not refreshed for a full day on 11-19
+  assert.equal(cardStale(DATA, "HR", "2026-11-18"), false);
+  assert.equal(cardStale(DATA, "HR", "2026-11-19"), true);
+});
+
+test("Tuesday after midnight: the new week is current, last week is previous", () => {
+  const s = priceStates(withUpcoming, "SI", "petrol95", "2026-11-24");
+  assert.equal(s.current.from, "2026-11-24");
+  assert.equal(s.previous.from, "2026-11-17");
+  assert.equal(s.forecast, null);
+});
+
+test("reload data when the app comes back after 5 minutes or on a new day", () => {
+  const t = Date.parse("2026-11-23T10:00:00Z");
+  assert.equal(shouldRefresh(t, "2026-11-23", t + 4 * 60000, "2026-11-23"), false);
+  assert.equal(shouldRefresh(t, "2026-11-23", t + 6 * 60000, "2026-11-23"), true);
+  assert.equal(shouldRefresh(t, "2026-11-23", t + 60000, "2026-11-24"), true);
 });
 
 test("missing series gives nulls", () => {

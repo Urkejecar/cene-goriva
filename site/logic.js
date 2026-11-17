@@ -93,6 +93,32 @@ export function isStale(checkedAtIso, nowMs) {
   return nowMs - Date.parse(checkedAtIso) > STALE_MS;
 }
 
+const COUNTRY_SOURCE = { SI: "si_gov", HR: "hr_mzoe" };
+
+/**
+ * True when a country's prices may be out of date even though the job still runs:
+ * its source failed in the last run, the SI official week has ended without a new
+ * one, or the HR price wasn't confirmed for a whole day.
+ */
+export function cardStale(data, country, today) {
+  if ((data.errors || []).some((e) => e.source === COUNTRY_SOURCE[country])) return true;
+  const yesterday = isoFromMs(dayMs(today) - DAY_MS);
+  for (const fuel of ["petrol95", "diesel"]) {
+    const { current } = priceStates(data, country, fuel, today);
+    if (!current) continue;
+    if (current.s === "gov.si" && current.to < today) return true;
+    if (current.s === "mzoe" && current.to < yesterday) return true;
+  }
+  return false;
+}
+
+const REFRESH_MS = 5 * 60 * 1000;
+
+/** A home-screen app resumes without reloading: refetch after 5 minutes or on a new day. */
+export function shouldRefresh(loadedAtMs, loadedToday, nowMs, today) {
+  return nowMs - loadedAtMs > REFRESH_MS || today !== loadedToday;
+}
+
 export function formatPrice(p) {
   const cents = p * 100;
   const decimals = Math.abs(cents - Math.round(cents)) < 1e-6 ? 2 : 3;

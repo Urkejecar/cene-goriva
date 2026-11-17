@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import sys
 import urllib.request
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
 from zoneinfo import ZoneInfo
@@ -18,6 +18,8 @@ from .models import Forecast, Period
 TZ = ZoneInfo("Europe/Ljubljana")
 USER_AGENT = "cene-goriva-bot/1.0"
 EU_HOUR_UTC = 5  # refresh the (large, weekly) EU file once a day
+ALERT_AFTER = timedelta(hours=3)  # email the owner only when a source has been failing this long
+ALERT_EVERY = timedelta(hours=24)  # ...and then at most once a day
 
 
 def today_in_ljubljana(now: datetime) -> date:
@@ -49,13 +51,43 @@ def _periods(cache: dict | None) -> list[Period]:
     return [Period.from_json(d) for d in (cache or {}).get("periods", [])]
 
 
+def _iso(t: datetime) -> str:
+    return t.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _alerts(status_file: Path, attempted: list[str], failed: set[str], now: datetime) -> list[str]:
+    """Sources the owner should be emailed about: failing for 3+ hours, at most once a day each.
+
+    status.json only changes when a source starts/stops failing or an alert is sent,
+    so it adds no commits while everything works.
+    """
+    status = _read(status_file) or {}
+    for name in attempted:
+        if name in failed:
+            status.setdefault(name, {"failing_since": _iso(now)})
+        else:
+            status.pop(name, None)
+    alerts = []
+    for name, entry in sorted(status.items()):
+        since = datetime.fromisoformat(entry["failing_since"])
+        alerted = entry.get("alerted_at")
+        if now - since >= ALERT_AFTER and (alerted is None or now - datetime.fromisoformat(alerted) >= ALERT_EVERY):
+            entry["alerted_at"] = _iso(now)
+            alerts.append(name)
+    if status or status_file.exists():
+        _write(status_file, status)
+    return alerts
+
+
 def run(now: datetime, fetch: Callable[[str], bytes], data_dir: Path, out_file: Path) -> dict:
     today = today_in_ljubljana(now)
     utc = now.astimezone(timezone.utc)
     caches = {name: data_dir / f"{name}.json" for name in ("si_gov", "hr_mzoe", "eu_bulletin", "napoved")}
     errors: list[dict] = []
+    attempted: list[str] = []
 
     def attempt(name: str, job: Callable[[], None]) -> None:
+        attempted.append(name)
         try:
             job()
         except Exception as e:  # each source fails on its own; keep its last good cache
@@ -94,6 +126,7 @@ def run(now: datetime, fetch: Callable[[str], bytes], data_dir: Path, out_file: 
     periods = build.combine(official, _periods(_read(caches["eu_bulletin"])))
     forecasts = [Forecast.from_json(d) for d in (_read(caches["napoved"]) or {}).get("forecasts", [])]
     data = build.site_data(periods, forecasts, errors, now, today)
+    data["alerts"] = _alerts(data_dir / "status.json", attempted, {e["source"] for e in errors}, now)
 
     out_file.parent.mkdir(parents=True, exist_ok=True)
     out_file.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

@@ -82,9 +82,37 @@ def test_today_is_ljubljana_date():
     assert update.today_in_ljubljana(datetime(2026, 11, 16, 23, 30, tzinfo=UTC)) == date(2026, 11, 17)
 
 
-def test_check_errors_exit_code(tmp_path):
+def test_check_errors_fails_only_on_alerts(tmp_path):
     f = tmp_path / "data.json"
-    f.write_text(json.dumps({"errors": [{"source": "si_gov", "message": "boom"}]}), encoding="utf-8")
+    boom = [{"source": "si_gov", "message": "boom"}]
+    f.write_text(json.dumps({"errors": boom, "alerts": ["si_gov"]}), encoding="utf-8")
     assert check_errors.main([str(f)]) == 1
-    f.write_text(json.dumps({"errors": []}), encoding="utf-8")
+    f.write_text(json.dumps({"errors": boom, "alerts": []}), encoding="utf-8")
     assert check_errors.main([str(f)]) == 0
+
+
+def failing_runs(tmp_path, web, hours):
+    """Run at NOW (all OK), then with gov.si broken at NOW + each of `hours`; return each run's alerts."""
+    run(tmp_path, web)
+    web.responses[si_gov.URL] = b"<html>500</html>"
+    return [run(tmp_path, web, NOW + timedelta(hours=h))["alerts"] for h in hours]
+
+
+def test_single_failure_does_not_alert(tmp_path):
+    assert failing_runs(tmp_path, FakeWeb(), [0.5]) == [[]]
+
+
+def test_alert_after_three_hours_then_once_a_day(tmp_path):
+    alerts = failing_runs(tmp_path, FakeWeb(), [0.5, 1, 3.4, 3.6, 4, 12, 27.6])
+    assert alerts == [[], [], [], ["si_gov"], [], [], ["si_gov"]]
+
+
+def test_recovery_clears_failure(tmp_path):
+    web = FakeWeb()
+    failing_runs(tmp_path, web, [0.5, 1])
+    web.responses[si_gov.URL] = (FIX / "si_gov.csv").read_bytes()
+    run(tmp_path, web, NOW + timedelta(hours=2))
+    web.responses[si_gov.URL] = b"<html>500</html>"
+    # failing again from 2.5 h: no alert at 4 h (only 1.5 h of failure)
+    assert run(tmp_path, web, NOW + timedelta(hours=2.5))["alerts"] == []
+    assert run(tmp_path, web, NOW + timedelta(hours=4))["alerts"] == []

@@ -1,4 +1,7 @@
-"""Fail (exit 1) when the last update recorded source errors, so GitHub emails the owner.
+"""Fail (exit 1) when a source has been failing long enough to tell the owner, so GitHub emails them.
+
+Single failed runs are only printed: sources hiccup, and an email for every one of
+them would teach the owner to ignore the emails. See `update._alerts`.
 
 Run with:  python -m scraper.check_errors site/data.json
 """
@@ -11,10 +14,12 @@ from pathlib import Path
 
 def main(argv: list[str]) -> int:
     data = json.loads(Path(argv[0]).read_text(encoding="utf-8"))
-    errors = data.get("errors") or []
-    for e in errors:
+    for e in data.get("errors") or []:
         print(f"Source failed: {e.get('source')}: {e.get('message')}")
-    return 1 if errors else 0
+    alerts = data.get("alerts") or []
+    if alerts:
+        print(f"Failing for 3+ hours: {', '.join(alerts)}")
+    return 1 if alerts else 0
 
 
 if __name__ == "__main__":
