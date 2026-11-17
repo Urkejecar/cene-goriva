@@ -43,21 +43,30 @@ class Forecast:
     fuel: str
     start: date
     price: float
-    status: str  # "first" | "final"
+    status: str  # "first" | "final" (napovedgoriv.si) | "estimate" (our HR estimate)
     updated: date
+    known: int = 0  # market days the forecast is based on...
+    days: int = 5  # ...out of this many
+    market: float | None = None  # market price change behind it, EUR/l before VAT
 
     def to_json(self) -> dict:
-        return {
+        d = {
             "c": self.country,
             "f": self.fuel,
             "from": self.start.isoformat(),
             "p": self.price,
             "status": self.status,
             "updated": self.updated.isoformat(),
+            "known": self.known,
+            "days": self.days,
         }
+        if self.market is not None:
+            d["market"] = self.market
+        return d
 
     @staticmethod
     def from_json(d: dict) -> Forecast:
         return Forecast(
-            d["c"], d["f"], date.fromisoformat(d["from"]), d["p"], d["status"], date.fromisoformat(d["updated"])
+            d["c"], d["f"], date.fromisoformat(d["from"]), d["p"], d["status"], date.fromisoformat(d["updated"]),
+            d.get("known", 0), d.get("days", 5), d.get("market"),
         )

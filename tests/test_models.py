@@ -18,10 +18,18 @@ def test_period_json_roundtrip():
 
 
 def test_forecast_json_roundtrip():
-    f = Forecast("SI", "diesel", date(2026, 11, 24), 1.77, "final", date(2026, 11, 21))
+    f = Forecast("SI", "diesel", date(2026, 11, 24), 1.77, "final", date(2026, 11, 21), 5, 5, -0.01)
     j = f.to_json()
-    assert j == {"c": "SI", "f": "diesel", "from": "2026-11-24", "p": 1.77, "status": "final", "updated": "2026-11-21"}
+    assert j == {
+        "c": "SI", "f": "diesel", "from": "2026-11-24", "p": 1.77, "status": "final", "updated": "2026-11-21",
+        "known": 5, "days": 5, "market": -0.01,
+    }
     assert Forecast.from_json(j) == f
+
+
+def test_forecast_from_old_cache():
+    old = {"c": "SI", "f": "diesel", "from": "2026-11-24", "p": 1.77, "status": "final", "updated": "2026-11-21"}
+    assert Forecast.from_json(old) == Forecast("SI", "diesel", date(2026, 11, 24), 1.77, "final", date(2026, 11, 21))
 
 
 def test_check_period_rejects_out_of_range():

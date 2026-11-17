@@ -56,17 +56,26 @@ def test_failing_source_keeps_cache(tmp_path):
     assert (tmp_path / "data" / "si_gov.json").read_bytes() == cache
 
 
-def test_napoved_throttled(tmp_path):
-    # Schedule runs at :00 and :30; napoved only on the :00 run, EU once a day.
+def test_eu_once_a_day(tmp_path):
+    # Hourly runs: every source each run, except the EU file (first run, then at 05:xx UTC).
     web = FakeWeb()
-    run(tmp_path, web)  # 06:00 UTC
-    run(tmp_path, web, NOW + timedelta(minutes=35))  # 06:35 UTC
-    assert web.calls.count(napoved.URL) == 1
-    assert web.calls.count(eu_bulletin.URL) == 1
-    assert web.calls.count(si_gov.URL) == 2
-    run(tmp_path, web, NOW + timedelta(minutes=62))  # 07:02 UTC
-    assert web.calls.count(napoved.URL) == 2
-    assert web.calls.count(eu_bulletin.URL) == 1
+    for h in range(24):
+        run(tmp_path, web, NOW + timedelta(hours=h, minutes=40 if h % 2 else 5))
+    assert web.calls.count(napoved.URL) == 24
+    assert web.calls.count(si_gov.URL) == 24
+    assert web.calls.count(eu_bulletin.URL) == 2  # 06:05 (no cache yet), then 05:40 next day
+
+
+def test_forecasts_for_both_countries(tmp_path):
+    web = FakeWeb()
+    web.responses[napoved.URL] = (FIX / "napoved_one_day.html").read_bytes()
+    fcs = {(f["c"], f["f"]): f for f in run(tmp_path, web)["forecasts"]}
+    assert fcs[("SI", "petrol95")]["p"] == 1.429
+    assert fcs[("SI", "diesel")]["p"] == 1.791
+    # HR: 1.56 - 0.0124 * 1.25 = 1.5445 -> 1.54; 1.82 - 0.0056 * 1.25 = 1.813 -> 1.81
+    assert (fcs[("HR", "petrol95")]["p"], fcs[("HR", "petrol95")]["status"]) == (1.54, "estimate")
+    assert fcs[("HR", "diesel")]["p"] == 1.81
+    assert fcs[("HR", "diesel")]["from"] == "2026-11-24"
 
 
 def test_unchanged_run_does_not_rewrite_caches(tmp_path):

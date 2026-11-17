@@ -1,6 +1,6 @@
 import {
   cardStale, chartEnd, dayMs, extensionPoints, formatChange, formatPrice, isStale, priceStates, rangeStart, shortDate,
-  shouldRefresh, stepPoints, todayLjubljana,
+  shouldRefresh, stepPoints, todayLjubljana, validUntil,
 } from "./logic.js";
 
 const COUNTRY = { SI: "Slovenija", HR: "Hrvaška" };
@@ -67,36 +67,44 @@ function renderCard(country, today) {
   }
 
   const cur = states.petrol95.current || states.diesel.current;
-  const validText = country === "SI" && cur.s === "gov.si"
-    ? `velja od ${shortDate(cur.from)} do ${shortDate(cur.to)}`
-    : `velja od ${shortDate(cur.from)}`;
-  card.append(el("p", { class: "valid" }, validText));
+  card.append(el("p", { class: "valid" }, `velja od ${shortDate(cur.from)} do ${shortDate(validUntil(cur, today))}`));
   if (cardStale(data, country, today)) {
     card.append(el("p", { class: "stale-note" }, "Cena morda ni več aktualna – vir trenutno ni dosegljiv."));
   }
 
   const up = states.petrol95.upcoming || states.diesel.upcoming;
   if (up) {
-    card.append(el("p", { class: "next official" },
-      el("strong", {}, `Uradno od ${dayName(up.from)} ${shortDate(up.from)}: `), nextPrices(country, states, "upcoming")));
+    card.append(nextBox(country, states, "upcoming", "official", "Uradna cena", up,
+      "Objavljena uradna cena (gov.si)."));
     return;
   }
   const fc = states.petrol95.forecast || states.diesel.forecast;
-  if (fc) {
-    const kind = fc.status === "final" ? "končna napoved" : "prva napoved";
-    card.append(el("p", { class: "next forecast" },
-      `Pričakovano od ${dayName(fc.from)} ${shortDate(fc.from)}: `, nextPrices(country, states, "forecast"),
-      ` (${kind}, vir: `, el("a", { href: "https://napovedgoriv.si/", rel: "noopener" }, "napovedgoriv.si"), ")"));
-  }
+  if (fc) card.append(nextBox(country, states, "forecast", "forecast", "Pričakovana cena", fc, forecastNote(fc)));
 }
 
-function nextPrices(country, states, key) {
-  const parts = [];
+function forecastNote(fc) {
+  const days = `podatki za ${fc.known} od ${fc.days} dni`;
+  if (fc.status === "estimate") {
+    return [`Neuradna ocena po gibanju cen nafte na trgu (${days}). Vlada lahko spremeni trošarine.`];
+  }
+  const kind = fc.status === "final" ? "Končna napoved" : `Zgodnja napoved (${days})`;
+  return [`${kind}, neuradno. Vir: `, el("a", { href: "https://napovedgoriv.si/", rel: "noopener" }, "napovedgoriv.si")];
+}
+
+/** The box under the current prices: the official next price, or the expected one. */
+function nextBox(country, states, key, kind, label, first, note) {
+  const box = el("div", { class: `next ${kind}` },
+    el("p", { class: "next-head" }, el("span", { class: "badge" }, label), ` od ${dayName(first.from)} ${shortDate(first.from)}`));
   for (const fuel of ["petrol95", "diesel"]) {
     const item = states[fuel][key];
-    if (item) parts.push(`${FUEL_LABEL[country][fuel].toLowerCase()} ${formatPrice(item.p)}`);
+    if (!item) continue;
+    const price = el("span", {}, el("span", { class: "next-price" }, formatPrice(item.p)));
+    const cur = states[fuel].current;
+    if (cur) price.append(el("span", { class: "change", title: "razlika do trenutne cene" }, formatChange(item.p, cur.p)));
+    box.append(el("div", { class: "row" }, el("span", { class: "name" }, FUEL_LABEL[country][fuel]), price));
   }
-  return parts.join(" · ");
+  box.append(el("p", { class: "next-note" }, ...[note].flat()));
+  return box;
 }
 
 // ---------- chart ----------
@@ -156,7 +164,9 @@ function datasetsFor(today) {
       const last = pts.at(-1);
       sets.push({
         kind: ext[0].kind, country, label: COUNTRY[country], data: [{ x: last.x, y: last.y, connector: true }, ...ext],
-        borderColor: color, backgroundColor: color, borderWidth: 2, borderDash: ext[0].kind === "official" ? [6, 4] : [2, 4],
+        // The expected price is drawn fainter and dotted, so it never looks like an official one.
+        borderColor: ext[0].kind === "official" ? color : `${color}99`, backgroundColor: color,
+        borderWidth: 2, borderDash: ext[0].kind === "official" ? [6, 4] : [2, 4],
         pointRadius: 0, pointHoverRadius: 5, pointHitRadius: 8, tension: 0,
       });
     }
@@ -169,7 +179,7 @@ function tooltipLabel(item) {
   const p = item.raw;
   if (p.connector) return null;
   if (ds.kind === "official") return `${ds.label}: ${formatPrice(p.y)} (uradno od ${shortDate(states(ds.country).upcoming.from)})`;
-  if (ds.kind === "forecast") return `${ds.label}: ${formatPrice(p.y)} (pričakovano)`;
+  if (ds.kind === "forecast") return `${ds.label}: ${formatPrice(p.y)} (pričakovano, neuradno)`;
   return `${ds.label}: ${formatPrice(p.y)} (${shortDate(p.from)}–${shortDate(p.to)}, ${SOURCE[p.s] || p.s})`;
 }
 
@@ -343,6 +353,8 @@ function main() {
   // A home-screen app often resumes without reloading the page.
   document.addEventListener("visibilitychange", refreshIfOld);
   window.addEventListener("pageshow", (e) => { if (e.persisted) refreshIfOld(); });
+  // A page left open keeps itself up to date too.
+  setInterval(refreshIfOld, 60 * 1000);
   load();
 }
 

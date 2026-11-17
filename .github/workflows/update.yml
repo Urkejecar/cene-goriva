@@ -2,8 +2,8 @@ name: update
 
 on:
   schedule:
-    # Every 30 minutes, off the busy :00/:30 marks so GitHub doesn't delay the run.
-    - cron: "7,37 * * * *"
+    # Every hour, off the busy :00 mark so GitHub doesn't delay the run.
+    - cron: "17 * * * *"
   workflow_dispatch:
   push:
     branches: [main]

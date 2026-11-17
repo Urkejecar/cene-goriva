@@ -70,10 +70,29 @@ export function stepPoints(periods, country, fuel, from, to) {
   return pts;
 }
 
-/** Last day the main line is drawn to: the day before an upcoming price, else the current period's end, else today. */
+/** The first Monday on or after `iso`. */
+function mondayOnOrAfter(iso) {
+  const dow = new Date(dayMs(iso)).getUTCDay(); // 0 = Sunday
+  return isoFromMs(dayMs(iso) + ((8 - dow) % 7) * DAY_MS);
+}
+
+/**
+ * Last day a current price is valid. SI: the official end date. HR (mzoe): prices are
+ * set weekly from Tuesday to Monday, and our period only runs to the last day we saw it,
+ * so it holds until the coming Monday.
+ */
+export function validUntil(period, today) {
+  if (period.s === "mzoe") return mondayOnOrAfter(period.from > today ? period.from : today);
+  return period.to;
+}
+
+/** Last day the main line is drawn to: the day before an upcoming price, else the current price's end, else today. */
 export function chartEnd(states, today) {
   if (states.upcoming) return isoFromMs(dayMs(states.upcoming.from) - DAY_MS);
-  if (states.current && states.current.to > today) return states.current.to;
+  if (states.current) {
+    const end = validUntil(states.current, today);
+    if (end > today) return end;
+  }
   return today;
 }
 

@@ -17,7 +17,7 @@ from .models import Forecast, Period
 
 TZ = ZoneInfo("Europe/Ljubljana")
 USER_AGENT = "cene-goriva-bot/1.0"
-EU_HOUR_UTC = 5  # refresh the (large, weekly) EU file once a day
+EU_HOUR_UTC = 5
 ALERT_AFTER = timedelta(hours=3)  # email the owner only when a source has been failing this long
 ALERT_EVERY = timedelta(hours=24)  # ...and then at most once a day
 
@@ -116,15 +116,15 @@ def run(now: datetime, fetch: Callable[[str], bytes], data_dir: Path, out_file: 
 
     attempt("si_gov", do_si)
     attempt("hr_mzoe", do_hr)
-    # napovedgoriv.si: at most once an hour (the :00 run), or when we have nothing yet.
-    if utc.minute < 30 or not caches["napoved"].exists():
-        attempt("napoved", do_napoved)
-    if (utc.hour == EU_HOUR_UTC and utc.minute < 30) or not caches["eu_bulletin"].exists():
+    attempt("napoved", do_napoved)
+    # The EU file is large and weekly: once a day (the job runs hourly), or when we have nothing yet.
+    if utc.hour == EU_HOUR_UTC or not caches["eu_bulletin"].exists():
         attempt("eu_bulletin", do_eu)
 
     official = _periods(_read(caches["si_gov"])) + _periods(_read(caches["hr_mzoe"]))
     periods = build.combine(official, _periods(_read(caches["eu_bulletin"])))
     forecasts = [Forecast.from_json(d) for d in (_read(caches["napoved"]) or {}).get("forecasts", [])]
+    forecasts += build.hr_estimates(periods, forecasts, today)
     data = build.site_data(periods, forecasts, errors, now, today)
     data["alerts"] = _alerts(data_dir / "status.json", attempted, {e["source"] for e in errors}, now)
 

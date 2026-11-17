@@ -1,6 +1,6 @@
 # Putting "Cene goriv" on the internet (free)
 
-The website lives on **GitHub** (free). GitHub also runs a small job every 30 minutes
+The website lives on **GitHub** (free). GitHub also runs a small job every hour
 that collects the newest prices and updates the website. You only do the steps
 below once.
 
@@ -42,7 +42,7 @@ Your website is now at:
 
 **`https://<username>.github.io/cene-goriva/`**
 
-Send this link to family and friends. After that it updates itself every 30 minutes.
+Send this link to family and friends. After that it updates itself every hour.
 
 ## 6. Add it to the phone home screen (like an app)
 

@@ -50,3 +50,19 @@ def test_site_data_drops_old_and_past_forecasts():
         "forecasts": [next_fc.to_json()],
         "errors": [],
     }
+
+
+def test_hr_estimate_follows_si_market_change():
+    today = date(2026, 11, 18)
+    hr = [Period("HR", "petrol95", date(2026, 11, 17), date(2026, 11, 18), 1.56, "mzoe")]
+    si = [Forecast("SI", "petrol95", date(2026, 11, 24), 1.43, "first", today, 2, 5, 0.04)]
+    [est] = build.hr_estimates(hr, si, today)
+    assert est == Forecast("HR", "petrol95", date(2026, 11, 24), 1.61, "estimate", today, 2, 5, 0.04)
+
+
+def test_no_hr_estimate_without_market_change_or_when_hr_already_changed():
+    today = date(2026, 11, 24)
+    hr = [Period("HR", "petrol95", date(2026, 11, 24), date(2026, 11, 24), 1.56, "mzoe")]
+    fc = Forecast("SI", "petrol95", date(2026, 11, 24), 1.43, "first", today, 2, 5, 0.04)
+    assert build.hr_estimates(hr, [fc], today) == []
+    assert build.hr_estimates(hr, [Forecast("SI", "petrol95", date(2026, 12, 1), 1.43, "first", today)], today) == []

@@ -12,6 +12,12 @@
   --hr: #e34948;
   --banner-bg: #fff4cc;
   --banner-text: #5c4300;
+  --fc-bg: #fff8e1;
+  --fc-border: #c99400;
+  --fc-text: #6b4d00;
+  --up-bg: #ebf6ef;
+  --up-border: #2e9e5b;
+  --up-text: #1b6337;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -28,6 +34,12 @@
     --hr: #e66767;
     --banner-bg: #3d3000;
     --banner-text: #ffe08a;
+    --fc-bg: #2a2206;
+    --fc-border: #b88a00;
+    --fc-text: #f2cc5c;
+    --up-bg: #0f2a1a;
+    --up-border: #3fbf73;
+    --up-text: #8ee6b0;
   }
 }
 :root[data-theme="dark"] {
@@ -44,6 +56,12 @@
   --hr: #e66767;
   --banner-bg: #3d3000;
   --banner-text: #ffe08a;
+  --fc-bg: #2a2206;
+  --fc-border: #b88a00;
+  --fc-text: #f2cc5c;
+  --up-bg: #0f2a1a;
+  --up-border: #3fbf73;
+  --up-text: #8ee6b0;
 }
 
 * { box-sizing: border-box; }
@@ -81,10 +99,21 @@ a { color: var(--accent); }
   margin: 8px 0 0; padding: 6px 10px; border-radius: 8px; font-size: .875rem;
   background: var(--banner-bg); color: var(--banner-text); font-weight: 600;
 }
-.next { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--border); font-size: .95rem; }
-.next.official strong { color: var(--text); }
-.next.forecast { color: var(--text-2); font-style: italic; }
-.next.forecast a { font-style: normal; }
+.next { margin: 12px 0 0; padding: 8px 12px 10px; border-radius: 10px; font-size: .95rem; }
+.next.official { background: var(--up-bg); border: 2px solid var(--up-border); }
+.next.forecast { background: var(--fc-bg); border: 2px dashed var(--fc-border); }
+.next-head { margin: 0 0 2px; color: var(--text-2); font-size: .875rem; }
+.badge {
+  display: inline-block; padding: 1px 8px; border-radius: 999px; margin-right: 4px;
+  font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #fff;
+}
+.official .badge { background: var(--up-border); }
+.forecast .badge { background: var(--fc-border); color: #1f1700; }
+.next .row { padding: 2px 0; }
+.next-price { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.official .next-price { color: var(--up-text); }
+.forecast .next-price { color: var(--fc-text); }
+.next-note { margin: 4px 0 0; color: var(--muted); font-size: .8rem; }
 .empty { color: var(--muted); }
 
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }

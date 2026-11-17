@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   cardStale, chartEnd, extensionPoints, formatChange, formatPrice, isStale, priceStates, rangeStart, shouldRefresh, stepPoints, todayLjubljana,
+  validUntil,
 } from "./logic.js";
 
 const P = (c, f, from, to, p, s = "gov.si") => ({ c, f, from, to, p, s });
@@ -103,7 +104,18 @@ test("chart end is the day before an upcoming price, else the current period end
   const hrUp = { periods: [...DATA.periods, P("HR", "petrol95", "2026-11-24", "2026-11-30", 1.52, "mzoe")] };
   assert.equal(chartEnd(priceStates(hrUp, "HR", "petrol95", "2026-11-18"), "2026-11-18"), "2026-11-23");
   assert.equal(chartEnd(priceStates(DATA, "SI", "petrol95", "2026-11-18"), "2026-11-18"), "2026-11-23");
-  assert.equal(chartEnd(priceStates(DATA, "HR", "petrol95", "2026-11-18"), "2026-11-18"), "2026-11-18");
+  // HR weekly price runs to Monday
+  assert.equal(chartEnd(priceStates(DATA, "HR", "petrol95", "2026-11-18"), "2026-11-18"), "2026-11-23");
+});
+
+test("valid until: SI official end, HR the coming Monday", () => {
+  const hr = P("HR", "petrol95", "2026-11-17", "2026-11-18", 1.56, "mzoe");
+  assert.equal(validUntil(hr, "2026-11-17"), "2026-11-23");
+  assert.equal(validUntil(hr, "2026-11-22"), "2026-11-23");
+  assert.equal(validUntil(hr, "2026-11-23"), "2026-11-23");
+  // unchanged price carried into the next week
+  assert.equal(validUntil(hr, "2026-11-24"), "2026-11-30");
+  assert.equal(validUntil(P("SI", "petrol95", "2026-11-17", "2026-11-23", 1.444), "2026-11-18"), "2026-11-23");
 });
 
 test("extension points for forecast and official upcoming", () => {
