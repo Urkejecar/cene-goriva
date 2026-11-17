@@ -70,12 +70,17 @@ is Claude's call.
 |---|---|---|---|
 | SI official weekly, since 2022-06-21 | `https://www.gov.si/teme/cene-naftnih-derivatov/element/162094/izvoz.csv` | CSV, UTF-8 BOM, `"od 17. 11. do 23. 11. 2026","1.444","1.798"` | Newest first. Published Monday afternoon, valid Tue–Mon. Older rows are 14-day periods. |
 | SI forecast | `https://napovedgoriv.si/` | HTML page | First forecast Thu morning, final Sat. No API; fetch at most hourly, credit + link on site. |
-| HR official weekly | Narodne novine: latest "Uredba o utvrđivanju najviših maloprodajnih cijena naftnih derivata" (`narodne-novine.nn.hr`) | HTML | Published Monday, valid from Tuesday for the period stated in the decree (currently 7 days, earlier 14). Parse Eurosuper 95 and Eurodizel max prices and the validity dates. |
+| HR official (current) | Croatian Ministry of Economy station data `https://webservis.mzoe-gor.hr/data.gz` | gzipped JSON: `postajas[].cjenici[{gorivo_id, cijena}]`, `gorivos[{id, vrsta_goriva_id}]` | **Revised 2026-11-17:** the NN decree only contains the formula, not the final prices, and no official structured price list exists. The regulated max price = the most common station price for Eurosuper 95 (vrsta_goriva 1+2) and Eurodizel (7+8): on 17.11.2026 1.56 (720 of ~1000 stations) and 1.82. Recorded daily; consecutive equal days merge into one period. New price visible once stations update (Tuesday 00:00), not Monday afternoon. |
 | History both countries (before official tables / HR backfill) | EU Weekly Oil Bulletin history xlsx: `https://energy.ec.europa.eu/document/download/906e60ca-8b6a-44e7-8589-652854d2fd3f_en?filename=Weekly_Oil_Bulletin_Prices_History_maticni_4web.xlsx` | XLSX, sheet "Prices with taxes", €/1000 l | Weekly national averages since 2005. Used for 5-year chart before official series start. |
-| (Optional fallback, HR) | `https://webservis.mzoe-gor.hr/api/trend-cijena` | JSON `[{dat_poc, avg_cijena, tip_goriva_id}]` | Daily average of all stations, ~2 months only. Not the regulated price; use only if NN parsing breaks. |
 
 Series rule: for each country & fuel, use the official regulated series where it exists,
 EU bulletin values before that. The chart marks this (tooltip says source).
+EU bulletin values are in EUR per 1000 l (also for HR before 2023), date = Monday of the
+week. Caveat: for HR the bulletin is the average of *all* stations (incl. freely priced
+additive fuels), ~10–15 c above the regulated price, so the HR line steps where our own
+daily recording begins. The chart tooltip and a small note under the chart say so.
+Croatia's "Uradno od torka" state is not available in v1 (follow-up option: read the
+Monday news article).
 
 ## Design
 
