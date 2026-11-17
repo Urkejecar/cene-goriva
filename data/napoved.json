@@ -1,3 +1,26 @@
 {
- "forecasts": []
+ "forecasts": [
+  {
+   "c": "SI",
+   "days": 5,
+   "f": "petrol95",
+   "from": "2026-11-24",
+   "known": 1,
+   "market": -0.012398,
+   "p": 1.429,
+   "status": "first",
+   "updated": "2026-11-17"
+  },
+  {
+   "c": "SI",
+   "days": 5,
+   "f": "diesel",
+   "from": "2026-11-24",
+   "known": 1,
+   "market": -0.005587,
+   "p": 1.791,
+   "status": "first",
+   "updated": "2026-11-17"
+  }
+ ]
 }
