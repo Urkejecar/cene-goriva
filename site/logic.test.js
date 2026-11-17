@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  extensionPoints, formatChange, formatPrice, isStale, priceStates, rangeStart, stepPoints, todayLjubljana,
+  chartEnd, extensionPoints, formatChange, formatPrice, isStale, priceStates, rangeStart, stepPoints, todayLjubljana,
 } from "./logic.js";
 
 const P = (c, f, from, to, p, s = "gov.si") => ({ c, f, from, to, p, s });
@@ -40,6 +40,12 @@ test("open HR period is still current the next day", () => {
   assert.equal(priceStates(DATA, "HR", "petrol95", "2026-11-18").current.p, 1.56);
 });
 
+test("no change shown against a different source", () => {
+  // HR regulated price vs last week's EU all-station average would be misleading.
+  const d = { periods: [P("HR", "petrol95", "2026-11-09", "2026-11-16", 1.749, "eu-bulletin"), P("HR", "petrol95", "2026-11-17", "2026-11-17", 1.56, "mzoe")] };
+  assert.equal(priceStates(d, "HR", "petrol95", "2026-11-17").previous, null);
+});
+
 test("missing series gives nulls", () => {
   assert.deepEqual(priceStates(DATA, "HR", "diesel", "2026-11-18"),
     { current: null, previous: null, upcoming: null, forecast: null });
@@ -58,6 +64,21 @@ test("step points are clipped to the window", () => {
   assert.equal(pts[0].y, 1.506);
   assert.equal(pts.at(-1).x, Date.UTC(2026, 10, 18) + 86399000);
   assert.equal(pts.length, 4);
+});
+
+test("latest period stays in effect up to the window end", () => {
+  // HR periods only run to the last day we observed them; the price holds until it changes.
+  const pts = stepPoints(DATA.periods, "HR", "petrol95", "2026-11-10", "2026-11-23");
+  assert.equal(pts.at(-1).x, Date.UTC(2026, 10, 23) + 86399000);
+  assert.equal(pts.at(-1).to, "2026-11-17");
+});
+
+test("chart end is the day before an upcoming price, else the current period end or today", () => {
+  assert.equal(chartEnd(priceStates(withUpcoming, "SI", "petrol95", "2026-11-23"), "2026-11-23"), "2026-11-23");
+  const hrUp = { periods: [...DATA.periods, P("HR", "petrol95", "2026-11-24", "2026-11-30", 1.52, "mzoe")] };
+  assert.equal(chartEnd(priceStates(hrUp, "HR", "petrol95", "2026-11-18"), "2026-11-18"), "2026-11-23");
+  assert.equal(chartEnd(priceStates(DATA, "SI", "petrol95", "2026-11-18"), "2026-11-18"), "2026-11-23");
+  assert.equal(chartEnd(priceStates(DATA, "HR", "petrol95", "2026-11-18"), "2026-11-18"), "2026-11-18");
 });
 
 test("extension points for forecast and official upcoming", () => {

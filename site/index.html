@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="sl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cene goriv</title>
+  <meta name="description" content="Cene bencina in dizla v Sloveniji in na Hrvaškem: trenutne, napovedane in zgodovina.">
+  <meta name="theme-color" content="#2a78d6">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <h1>⛽ Cene goriv</h1>
+      <p class="checked" id="checked"></p>
+    </header>
+
+    <p class="banner" id="stale" hidden>Podatki morda niso sveži.</p>
+    <p class="banner" id="load-error" hidden>Podatkov ni bilo mogoče naložiti. Poskusite znova čez nekaj minut.</p>
+
+    <section class="cards" aria-label="Trenutne cene">
+      <article class="card" id="card-SI" data-country="SI"></article>
+      <article class="card" id="card-HR" data-country="HR"></article>
+    </section>
+
+    <section class="chart-box" aria-label="Graf cen">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Gorivo" id="fuel">
+          <button type="button" data-value="petrol95">Bencin 95</button>
+          <button type="button" data-value="diesel">Dizel</button>
+        </div>
+        <div class="seg" role="group" aria-label="Država" id="countries">
+          <button type="button" data-value="SI"><span class="dot si"></span>Slovenija</button>
+          <button type="button" data-value="HR"><span class="dot hr"></span>Hrvaška</button>
+        </div>
+        <div class="seg" role="group" aria-label="Obdobje" id="range">
+          <button type="button" data-value="1w">1 teden</button>
+          <button type="button" data-value="1m">1 mesec</button>
+          <button type="button" data-value="1y">1 leto</button>
+          <button type="button" data-value="5y">5 let</button>
+        </div>
+      </div>
+      <div class="canvas-wrap"><canvas id="chart" role="img" aria-label="Graf gibanja cen goriv"></canvas></div>
+      <p class="legend-note">
+        <span class="key"><span class="line dashed"></span>uradna cena od torka</span>
+        <span class="key"><span class="line dotted"></span>pričakovana cena (napoved)</span>
+      </p>
+      <details class="table-view">
+        <summary>Pokaži cene v tabeli</summary>
+        <div id="table"></div>
+      </details>
+      <p class="note">Pred začetkom uradnih podatkov je prikazano tedensko povprečje EU (Weekly Oil Bulletin).
+        Za Hrvaško je to povprečje vseh črpalk, zato je nekoliko višje od regulirane cene.</p>
+    </section>
+
+    <footer class="foot">
+      <p>Regulirane cene na črpalkah izven avtocest. Viri:
+        <a href="https://www.gov.si/teme/cene-naftnih-derivatov/" rel="noopener">gov.si</a>,
+        napoved <a href="https://napovedgoriv.si/" rel="noopener">napovedgoriv.si</a> (neuradno),
+        <a href="https://mzoe-gor.hr/" rel="noopener">mzoe-gor.hr</a>,
+        <a href="https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en" rel="noopener">EU Weekly Oil Bulletin</a>.
+      </p>
+    </footer>
+  </main>
+  <script src="vendor/chart.umd.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

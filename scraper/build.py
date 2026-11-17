@@ -18,12 +18,20 @@ def combine(official: list[Period], eu: list[Period]) -> list[Period]:
             first_official[key] = p.start
 
     result = list(official)
+    before: dict[tuple[str, str], list[Period]] = {}
     for p in eu:
-        cutoff = first_official.get((p.country, p.fuel))
+        key = (p.country, p.fuel)
+        cutoff = first_official.get(key)
         if cutoff is None:
             result.append(p)
         elif p.start < cutoff:
-            result.append(replace(p, end=min(p.end, cutoff - timedelta(days=1))))
+            before.setdefault(key, []).append(p)
+    for key, eu_periods in before.items():
+        eu_periods.sort(key=lambda p: p.start)
+        last_day = first_official[key] - timedelta(days=1)
+        result += [replace(p, end=min(p.end, last_day)) for p in eu_periods[:-1]]
+        # The last EU week runs up to the official data, so the line steps instead of slanting.
+        result.append(replace(eu_periods[-1], end=last_day))
     result.sort(key=lambda p: (p.country, p.fuel, p.start))
     return result
 

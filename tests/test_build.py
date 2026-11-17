@@ -22,6 +22,13 @@ def test_combine_uses_eu_only_before_official():
     ]
 
 
+def test_combine_fills_gap_before_official():
+    # HR: last EU week ends 11-15, our own records start 11-17 -> EU fills 11-16 (no slanted line).
+    eu = [per("HR", date(2026, 11, 9), date(2026, 11, 15), 1.749, "eu-bulletin")]
+    official = [per("HR", date(2026, 11, 17), date(2026, 11, 17), 1.56, "mzoe")]
+    assert build.combine(official, eu)[0] == per("HR", date(2026, 11, 9), date(2026, 11, 16), 1.749, "eu-bulletin")
+
+
 def test_combine_eu_only_series():
     eu = [per("HR", date(2026, 11, 9), date(2026, 11, 15), 1.749, "eu-bulletin")]
     official = [per("SI", date(2026, 11, 17), date(2026, 11, 23), 1.444, "gov.si")]

@@ -41,7 +41,8 @@ export function priceStates(data, country, fuel, today) {
   let i = -1;
   s.forEach((p, k) => { if (p.from <= today) i = k; });
   const current = i >= 0 ? s[i] : null;
-  const previous = i >= 1 ? s[i - 1] : null;
+  // Only compare like with like: a regulated price vs an EU all-station average would mislead.
+  const previous = i >= 1 && s[i - 1].s === current.s ? s[i - 1] : null;
   const upcoming = s.find((p) => p.from > today) || null;
   const fc = (data.forecasts || []).find((f) => f.c === country && f.f === fuel && f.from > today) || null;
   return { current, previous, upcoming, forecast: upcoming ? null : fc };
@@ -51,17 +52,29 @@ export function rangeStart(range, today) {
   return isoFromMs(dayMs(today) - RANGE_DAYS[range] * DAY_MS);
 }
 
-/** Two points per period (start of first day, end of last day): straight lines draw exact steps. */
+/**
+ * Two points per period (start of first day, end of last day): straight lines draw exact steps.
+ * The latest period in the window stays in effect up to `to` (a price holds until it changes).
+ */
 export function stepPoints(periods, country, fuel, from, to) {
   const pts = [];
-  for (const p of series(periods, country, fuel)) {
-    if (p.to < from || p.from > to) continue;
+  const visible = series(periods, country, fuel).filter((p) => p.from <= to);
+  visible.forEach((p, k) => {
+    const isLatest = k === visible.length - 1;
+    if (!isLatest && p.to < from) return;
     const start = p.from > from ? p.from : from;
-    const end = p.to < to ? p.to : to;
+    const end = isLatest || p.to > to ? to : p.to;
     const base = { y: p.p, s: p.s, from: p.from, to: p.to };
     pts.push({ x: dayMs(start), ...base }, { x: dayMs(end) + END_OF_DAY_MS, ...base });
-  }
+  });
   return pts;
+}
+
+/** Last day the main line is drawn to: the day before an upcoming price, else the current period's end, else today. */
+export function chartEnd(states, today) {
+  if (states.upcoming) return isoFromMs(dayMs(states.upcoming.from) - DAY_MS);
+  if (states.current && states.current.to > today) return states.current.to;
+  return today;
 }
 
 /** The week of the official upcoming price, or else of the forecast. */
