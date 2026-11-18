@@ -83,11 +83,11 @@ function renderCard(country, today) {
 }
 
 function forecastNote(fc) {
-  const days = `podatki za ${fc.known} od ${fc.days} dni`;
+  const days = `podatki za ${fc.known} od ${fc.days} dni, stanje ${shortDate(fc.updated)}`;
   if (fc.status === "estimate") {
     return [`Neuradna ocena po gibanju cen nafte na trgu (${days}). Vlada lahko spremeni trošarine.`];
   }
-  const kind = fc.status === "final" ? "Končna napoved" : `Zgodnja napoved (${days})`;
+  const kind = fc.status === "final" ? `Končna napoved (stanje ${shortDate(fc.updated)})` : `Zgodnja napoved (${days})`;
   return [`${kind}, neuradno. Vir: `, el("a", { href: "https://napovedgoriv.si/", rel: "noopener" }, "napovedgoriv.si")];
 }
 

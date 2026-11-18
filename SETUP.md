@@ -60,9 +60,42 @@ Send this link to family and friends. After that it updates itself every hour.
   repositories without activity for 60 days. Open **Actions → update** and click
   **Enable workflow** (or just run it once with **Run workflow**).
 
+## 7. Reliable hourly updates (cron-job.org)
+
+GitHub's own timer is free but unreliable: on busy days it skips most runs.
+A free "alarm clock" service presses GitHub's **Run workflow** button every hour instead.
+GitHub's timer stays on as a backup.
+
+**A. Make a key that can only start this one job**
+
+1. Open <https://github.com/settings/personal-access-tokens/new>.
+2. **Token name:** `cene-goriva hourly`
+3. **Expiration:** the longest offered (if it expires, the site falls back to GitHub's slow timer).
+4. **Repository access:** *Only select repositories* → `cene-goriva`.
+5. **Permissions → Repository permissions → Actions:** *Read and write*. Nothing else.
+6. Click **Generate token** and copy it (starts with `github_pat_`). Don't share it anywhere else.
+
+**B. Set the alarm clock**
+
+1. Create a free account at <https://cron-job.org> and click **Create cronjob**.
+2. **Title:** `cene goriva`
+3. **URL:** `https://api.github.com/repos/Urkejecar/cene-goriva/actions/workflows/update.yml/dispatches`
+4. **Execution schedule:** *Every hour* (at minute 5).
+5. Open the **Advanced** tab:
+   - **Request method:** `POST`
+   - **Headers** (add three):
+     - `Authorization` = `Bearer ` followed by the token from step A
+     - `Accept` = `application/vnd.github+json`
+     - `X-GitHub-Api-Version` = `2022-11-28`
+   - **Request body:** `{"ref":"main"}`
+6. Click **Test run**. The answer should be **204** (= OK, nothing to show). Then **Create**.
+7. In GitHub's **Actions** tab a new **update** run appears within a minute.
+
 ## For Claude (maintenance notes)
 
 - The update job commits price data to `main` every day: always `git pull` before
   changing code.
+- Hourly runs come from cron-job.org (workflow_dispatch, section 7); the GitHub `schedule`
+  is only a backup because GitHub drops most scheduled runs.
 - Tests: `python -m pytest -q` and `node --test site/logic.test.js`.
 - Design and plan: `docs/superpowers/specs/` and `docs/superpowers/plans/`.
