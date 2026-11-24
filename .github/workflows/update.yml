@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy_retry.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -69,7 +69,18 @@ jobs:
         with:
           path: site
 
+      # GitHub Pages now and then rejects a deploy for no reason on our side
+      # (~1 in 6 hourly runs, Nov 2026). Retry once after a minute instead of failing.
       - id: deploy
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Wait before retrying deploy
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 60
+
+      - id: deploy_retry
+        if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
 
       # After deploying: fail the run if a source broke, so GitHub emails the owner.
