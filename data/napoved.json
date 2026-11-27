@@ -5,9 +5,9 @@
    "days": 5,
    "f": "petrol95",
    "from": "2026-12-01",
-   "known": 3,
-   "market": -0.018017,
-   "p": 1.393,
+   "known": 4,
+   "market": -0.01646,
+   "p": 1.394,
    "status": "first",
    "updated": "2026-11-27"
   },
@@ -16,9 +16,9 @@
    "days": 5,
    "f": "diesel",
    "from": "2026-12-01",
-   "known": 3,
-   "market": -0.066378,
-   "p": 1.66,
+   "known": 4,
+   "market": -0.062757,
+   "p": 1.664,
    "status": "first",
    "updated": "2026-11-27"
   }
